@@ -1,0 +1,27 @@
+# Free LLM via OpenRouter (OpenAI-compatible API — used for answering + verification)
+openai>=1.40
+
+# Vector store (ships its own ONNX embedding model — runs locally, FREE, no PyTorch)
+chromadb>=0.5
+
+# PDF parsing
+pypdf>=4.0
+
+# LangChain text splitter (smart, recursive chunking)
+langchain-text-splitters>=0.3
+
+# Web backend (custom frontend + API)
+fastapi>=0.110
+uvicorn[standard]>=0.29
+python-multipart>=0.0.9   # PDF uploads
+
+# Config / secrets
+python-dotenv>=1.0
+
+# Trained ML model (sentence rhetorical-role classifier)
+scikit-learn>=1.4
+joblib>=1.3
+
+# ---- OPTIONAL: cross-encoder re-ranking (heavier, needs PyTorch) ----
+# Uncomment to enable better retrieval ranking (see src/retriever.py).
+# sentence-transformers>=3.0

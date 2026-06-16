@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CiteCheck</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css?v=5" />
+</head>
+<body>
+  <div class="app">
+    <!-- ───────── Sidebar ───────── -->
+    <aside class="sidebar" id="sidebar">
+      <div class="brand-row">
+        <div class="brand">CiteCheck</div>
+        <span class="dot"></span>
+      </div>
+      <div class="label">Research Intelligence</div>
+
+      <nav class="nav">
+        <button class="nav-item active" data-mode="chat"><i data-lucide="messages-square"></i><span>Chat</span></button>
+        <button class="nav-item" data-mode="compare"><i data-lucide="git-compare"></i><span>Compare</span></button>
+        <button class="nav-item" data-mode="review"><i data-lucide="gavel"></i><span>Peer Review</span></button>
+        <button class="nav-item" data-mode="translate"><i data-lucide="languages"></i><span>Translate</span></button>
+      </nav>
+
+      <div class="block">
+        <div class="label">Library</div>
+        <label class="upload" id="uploadLabel">
+          <input type="file" id="fileInput" accept="application/pdf" multiple hidden />
+          <i data-lucide="upload"></i><span>Upload PDFs</span>
+        </label>
+        <button class="btn ghost wide" id="ingestFolder"><i data-lucide="folder-input"></i> Ingest data/papers</button>
+        <button class="btn ghost wide subtle" id="clearIndex"><i data-lucide="trash-2"></i> Clear index</button>
+      </div>
+
+      <div class="block">
+        <div class="label">Overview</div>
+        <div class="stat-row"><span>Chunks</span><b id="statChunks">—</b></div>
+        <div class="stat-row"><span>Papers</span><b id="statPapers">—</b></div>
+        <div class="stat-row"><span>Calls today</span><b id="statCalls">—</b></div>
+        <div class="meter"><div class="meter-fill" id="meterFill"></div></div>
+      </div>
+
+      <div class="block">
+        <div class="label">Papers · click to open chat</div>
+        <div class="papers" id="papersList"></div>
+        <div class="scope-hint" id="scopeHint"></div>
+      </div>
+
+      <div class="block foot">
+        <button class="btn ghost wide" id="exportConv"><i data-lucide="file-down"></i> Export chat (PDF)</button>
+        <div class="credit label">Trained ML · RAG · multi-agent</div>
+      </div>
+    </aside>
+
+    <!-- ───────── Main ───────── -->
+    <main class="main">
+      <header class="topbar">
+        <button class="iconbtn only-mobile" id="menuBtn" aria-label="Menu"><i data-lucide="menu"></i></button>
+        <div class="crumbs"><span class="label" id="modeLabel">Chat</span></div>
+        <label class="verify-toggle" id="verifyWrap">
+          <input type="checkbox" id="verifyToggle" checked />
+          <span>Verify claims</span>
+        </label>
+      </header>
+
+      <!-- CHAT -->
+      <section class="view" id="view-chat">
+        <div class="chat" id="chat">
+          <div class="empty" id="empty">
+            <h1>Ask your papers anything.</h1>
+            <p>Answers are grounded in retrieved passages, fact-checked claim&nbsp;by&nbsp;claim, and tagged by a trained model.</p>
+            <div class="suggestions" id="suggestions"></div>
+          </div>
+        </div>
+        <div class="composer">
+          <div class="composer-inner">
+            <textarea id="input" rows="1" placeholder="Ask a question about your papers…"></textarea>
+            <button class="send" id="send" aria-label="Send"><i data-lucide="arrow-up"></i></button>
+          </div>
+          <div class="composer-hint label">Enter to send · Shift+Enter for newline</div>
+        </div>
+      </section>
+
+      <!-- COMPARE -->
+      <section class="view hidden" id="view-compare">
+        <div class="scroller">
+          <div class="panel-head">
+            <h2>Cross-paper consensus</h2>
+            <p>Enter a claim. CiteCheck checks where your selected papers <b>agree</b> and <b>disagree</b>. You need at least 2 papers.</p>
+          </div>
+          <div class="compare-papers" id="comparePapers"></div>
+          <div class="inline-form">
+            <input type="text" id="compareInput" placeholder="e.g. Attention outperforms recurrence for long sequences" />
+            <button class="btn solid" id="compareBtn"><i data-lucide="git-compare"></i> Compare</button>
+          </div>
+          <div id="compareResult"></div>
+        </div>
+      </section>
+
+      <!-- PEER REVIEW -->
+      <section class="view hidden" id="view-review">
+        <div class="scroller">
+          <div class="panel-head">
+            <h2>AI peer-review panel</h2>
+            <p>Three specialist reviewers critique a paper; a chair synthesizes a recommendation.</p>
+          </div>
+          <div class="inline-form">
+            <div class="dropdown" id="reviewDropdown">
+              <button class="dd-trigger" id="ddTrigger" type="button" aria-haspopup="listbox" aria-expanded="false">
+                <span class="dd-value" id="ddLabel">No papers yet</span>
+                <i data-lucide="chevron-down"></i>
+              </button>
+              <div class="dd-menu" id="ddMenu" role="listbox"></div>
+            </div>
+            <button class="btn solid" id="reviewBtn"><i data-lucide="gavel"></i> Run review</button>
+          </div>
+          <div id="reviewResult"></div>
+        </div>
+      </section>
+
+      <!-- TRANSLATE -->
+      <section class="view hidden" id="view-translate">
+        <div class="scroller">
+          <div class="panel-head">
+            <h2>Translate a paper</h2>
+            <p>Convert an indexed paper's text into another language.</p>
+          </div>
+          <div class="inline-form">
+            <div class="dropdown" id="trDropdown">
+              <button class="dd-trigger" id="trTrigger" type="button" aria-haspopup="listbox" aria-expanded="false">
+                <span class="dd-value" id="trLabel">No papers yet</span>
+                <i data-lucide="chevron-down"></i>
+              </button>
+              <div class="dd-menu" id="trMenu" role="listbox"></div>
+            </div>
+            <button class="btn solid" id="translateBtn"><i data-lucide="languages"></i> Translate</button>
+          </div>
+          <div class="lang-row">
+            <div class="lang-chips" id="langChips"></div>
+            <input id="langCustom" placeholder="or type a language…" />
+          </div>
+          <div id="translateResult"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="backdrop" id="backdrop"></div>
+  <div class="toast" id="toast"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="app.js?v=5"></script>
+</body>
+</html>

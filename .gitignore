@@ -1,0 +1,19 @@
+# Secrets
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+
+# Project data (don't commit PDFs, the vector DB, or usage counters)
+data/papers/*.pdf
+data/chroma/
+data/usage.json
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/

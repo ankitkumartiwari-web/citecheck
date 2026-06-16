@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: citecheck
+    runtime: python
+    plan: starter
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn server:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /healthz
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.4
+      - key: DATA_DIR
+        value: /opt/render/project/src/data
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: OPENROUTER_BASE_URL
+        value: https://openrouter.ai/api/v1
+    disk:
+      name: citecheck-data
+      mountPath: /opt/render/project/src/data
+      sizeGB: 5
