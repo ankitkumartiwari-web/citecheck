@@ -300,11 +300,22 @@ def post_clear(user: str = Depends(require_user)):
     return {"ok": True, **_stats_payload(user)}
 
 
+@app.get("/healthz")
+def healthz():
+    """Liveness probe for the host (Railway health check). No auth."""
+    return {"ok": True}
+
+
 # Serve the frontend LAST so the /api/* routes above take precedence.
 app.mount("/", StaticFiles(directory=str(FRONTEND_DIR), html=True), name="frontend")
 
 
 if __name__ == "__main__":
+    import os
+
     import uvicorn
 
-    uvicorn.run("server:app", host="127.0.0.1", port=8000, reload=False)
+    # Bind to 0.0.0.0 and the host-provided $PORT so the platform proxy can reach
+    # us in a container (localhost would only be reachable inside the container).
+    port = int(os.getenv("PORT", "8000"))
+    uvicorn.run("server:app", host="0.0.0.0", port=port, reload=False)
