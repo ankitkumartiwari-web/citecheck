@@ -1,4 +1,4 @@
-"""Command-line interface — handy for quick testing without the web UI.
+"""Command-line interface - handy for quick testing without the web UI.
 
 Examples (run from the project root):
     python main.py ingest                         # ingest data/papers/*.pdf
@@ -11,20 +11,23 @@ from src.rag import ask
 from src.ratelimit import DailyLimitReached
 from src.vectorstore import stats
 
+# The web UI isolates data per account; the CLI uses a single 'local' library.
+CLI_USER = "local"
+
 
 def cmd_ingest():
-    total, results = ingest_dir()
+    total, results = ingest_dir(CLI_USER)
     for name, n in results.items():
         print(f"  {name}: {n} chunks")
     print(f"Done. {total} chunks total.")
 
 
 def cmd_ask(question: str):
-    if stats()["chunks"] == 0:
+    if stats(CLI_USER)["chunks"] == 0:
         print("No documents indexed. Run: python main.py ingest")
         return
     try:
-        result = ask(question)
+        result = ask(question, user=CLI_USER)
     except DailyLimitReached as e:
         print(f"\n[STOPPED] {e}")
         return

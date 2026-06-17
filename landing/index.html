@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="styles.css?v=6" />
 </head>
 <body>
   <div class="page-shell">
@@ -23,20 +23,25 @@
         <a href="#features">Features</a>
         <a href="#stack">Stack</a>
       </nav>
-      <a class="nav-cta" href="https://web-production-8fa04.up.railway.app/" target="_blank" rel="noreferrer">Launch App</a>
+      <div class="header-actions">
+        <a class="nav-gh" href="https://github.com/ankitkumartiwari-web/citecheck" target="_blank" rel="noreferrer" aria-label="View source on GitHub" title="GitHub repo">
+          <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8Z"></path></svg>
+        </a>
+        <a class="nav-cta" href="https://citecheck.up.railway.app/" target="_blank" rel="noreferrer">Launch App</a>
+      </div>
     </header>
 
     <main id="top">
       <section class="hero section">
         <div class="hero-copy reveal">
           <p class="eyebrow">Grounded RAG for research papers</p>
-          <h1>Answers that cite sources, then check themselves.</h1>
+          <h1>Answers that cite sources, <span class="accent">then check themselves.</span></h1>
           <p class="hero-text">
             CiteCheck turns paper libraries into a clean research workspace: upload PDFs,
             ask questions, compare claims, and get claim-level verification against the retrieved text.
           </p>
           <div class="hero-actions">
-            <a class="btn primary" href="https://web-production-8fa04.up.railway.app/" target="_blank" rel="noreferrer">Open CiteCheck</a>
+            <a class="btn primary" href="https://citecheck.up.railway.app/" target="_blank" rel="noreferrer">Open CiteCheck</a>
             <a class="btn secondary" href="#workflow">See workflow</a>
           </div>
           <div class="metric-row" aria-label="Project highlights">
@@ -53,26 +58,57 @@
               <p>CiteCheck / Chat</p>
             </div>
             <div class="workspace-preview">
-              <aside>
-                <div class="mini-brand"><img src="favicon.svg" alt="" /><b>CiteCheck</b></div>
-                <button class="active">Chat</button>
-                <button>Compare</button>
-                <button>Peer Review</button>
-                <button>Translate</button>
-                <div class="meter"><i></i></div>
+              <aside class="wp-side">
+                <div class="wp-brand"><b>CiteCheck</b><span class="wp-dot"></span></div>
+                <div class="wp-eyebrow">Research Intelligence</div>
+                <nav class="wp-nav">
+                  <span class="wp-item active">
+                    <svg class="wp-ic" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Chat
+                  </span>
+                  <span class="wp-item">
+                    <svg class="wp-ic" viewBox="0 0 24 24"><circle cx="5" cy="6" r="3"/><circle cx="19" cy="18" r="3"/><path d="M12 6h5a2 2 0 0 1 2 2v7M12 18H7a2 2 0 0 1-2-2V9"/></svg>Compare
+                  </span>
+                  <span class="wp-item">
+                    <svg class="wp-ic" viewBox="0 0 24 24"><path d="m14 13-7 7-3-3 7-7M5 11l8-8 8 8M13 3v10"/></svg>Peer Review
+                  </span>
+                  <span class="wp-item">
+                    <svg class="wp-ic" viewBox="0 0 24 24"><path d="m5 8 6 6M4 14l6-6 2-3M2 5h12M7 2h1M22 22l-5-10-5 10M14 18h6"/></svg>Translate
+                  </span>
+                </nav>
+                <div class="wp-sec">Knowledge Base</div>
+                <span class="wp-btn">
+                  <svg class="wp-ic" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>Upload PDFs
+                </span>
+                <div class="wp-stat"><span>Papers loaded</span><b>0</b></div>
+                <div class="wp-stat"><span>Chunks indexed</span><b>0</b></div>
+                <div class="wp-sec">Paper Selection</div>
+                <div class="wp-pill"><span class="wp-check">✓</span>All papers</div>
+                <span class="wp-btn subtle">
+                  <svg class="wp-ic" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M12 18v-6M9 15l3 3 3-3"/></svg>Export chat (PDF)
+                </span>
               </aside>
-              <div class="chat-preview">
-                <div class="query">What problem does this paper solve?</div>
-                <article>
-                  <span class="tag">Fact-check: Grounded</span>
-                  <h2>The paper introduces a transformer architecture...</h2>
-                  <p>Evidence is retrieved from the indexed passages and cited inline before each claim is verified.</p>
-                  <div class="source-grid">
-                    <span>[1] p.2</span>
-                    <span>[2] p.4</span>
-                    <span>[3] p.7</span>
+              <div class="wp-main">
+                <div class="wp-top">
+                  <span class="wp-eyebrow">Chat</span>
+                  <div class="wp-top-right">
+                    <span class="wp-verify"><span class="wp-box">✓</span>Verify claims</span>
+                    <span class="wp-user"><span class="wp-ava">A</span>ankit_tiwari</span>
                   </div>
-                </article>
+                </div>
+                <div class="wp-empty">
+                  <h2>Ask your papers anything.</h2>
+                  <p>Answers are grounded in retrieved passages, fact-checked claim by claim, and tagged by a trained model.</p>
+                  <div class="wp-chips">
+                    <span>What problem does this paper solve?</span>
+                    <span>Summarize the key contributions.</span>
+                    <span>What method is proposed?</span>
+                    <span>Main results and limitations?</span>
+                  </div>
+                </div>
+                <div class="wp-composer">
+                  <span class="wp-input">Ask a question about your papers…</span>
+                  <span class="wp-send"><svg class="wp-ic" viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></svg></span>
+                </div>
               </div>
             </div>
           </div>
@@ -120,6 +156,11 @@
             <p>Ask natural-language questions and inspect every cited source passage.</p>
           </article>
           <article class="feature-card reveal">
+            <i data-icon="shield"></i>
+            <h3>Claim Verification</h3>
+            <p>A second pass labels each claim supported, partial, or unsupported against the text.</p>
+          </article>
+          <article class="feature-card reveal">
             <i data-icon="compare"></i>
             <h3>Cross-paper Compare</h3>
             <p>Check whether selected papers support, refute, or stay neutral on a claim.</p>
@@ -127,12 +168,17 @@
           <article class="feature-card reveal">
             <i data-icon="review"></i>
             <h3>Peer Review Panel</h3>
-            <p>Generate structured critiques from multiple reviewer perspectives.</p>
+            <p>Three specialist reviewer agents plus a chair that synthesizes a decision.</p>
           </article>
           <article class="feature-card reveal">
-            <i data-icon="shield"></i>
-            <h3>Claim Verification</h3>
-            <p>Separate supported statements from weak or unsupported model output.</p>
+            <i data-icon="translate"></i>
+            <h3>Translate</h3>
+            <p>Convert an indexed paper's text into another language in one pass.</p>
+          </article>
+          <article class="feature-card reveal">
+            <i data-icon="model"></i>
+            <h3>Trained ML Tagging</h3>
+            <p>A scikit-learn model tags each passage by rhetorical role, a real trained model.</p>
           </article>
         </div>
       </section>
@@ -141,14 +187,16 @@
         <div class="stack-panel reveal">
           <div>
             <p class="eyebrow">Engineering</p>
-            <h2>FastAPI, ChromaDB, local embeddings, OpenRouter-compatible models.</h2>
+            <h2>FastAPI, ChromaDB, local embeddings, a trained scikit-learn model, and OpenRouter-compatible LLMs.</h2>
           </div>
           <div class="stack-list">
             <span>FastAPI</span>
             <span>ChromaDB</span>
             <span>pypdf</span>
             <span>Local ONNX embeddings</span>
+            <span>scikit-learn</span>
             <span>OpenRouter</span>
+            <span>SQLite accounts</span>
             <span>Vanilla JS</span>
           </div>
         </div>
@@ -157,11 +205,14 @@
       <section class="section final-cta reveal">
         <img src="favicon.svg" alt="" />
         <h2>Research faster without trusting unsupported answers.</h2>
-        <a class="btn primary" href="https://web-production-8fa04.up.railway.app/" target="_blank" rel="noreferrer">Launch CiteCheck</a>
+        <div class="hero-actions">
+          <a class="btn primary" href="https://citecheck.up.railway.app/" target="_blank" rel="noreferrer">Launch CiteCheck</a>
+          <a class="btn secondary" href="https://github.com/ankitkumartiwari-web/citecheck" target="_blank" rel="noreferrer">View on GitHub</a>
+        </div>
       </section>
     </main>
   </div>
 
-  <script src="app.js"></script>
+  <script src="app.js?v=6"></script>
 </body>
 </html>

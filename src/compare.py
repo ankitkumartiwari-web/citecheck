@@ -1,8 +1,8 @@
 """Cross-paper contradiction & consensus finder.
 
 Given a claim, gather the most relevant passages from EACH indexed paper, then
-ask the model (one call) to judge each paper's stance — supports / refutes /
-neutral — with a short evidence quote, and summarize the overall consensus.
+ask the model (one call) to judge each paper's stance - supports / refutes /
+neutral - with a short evidence quote, and summarize the overall consensus.
 """
 from src.llm import chat_json
 from src.vectorstore import query_in_paper, stats
@@ -20,12 +20,13 @@ _SYSTEM = (
 )
 
 
-def compare_claim(claim: str, k: int = 3, papers=None) -> dict:
+def compare_claim(claim: str, k: int = 3, papers=None, user: str | None = None) -> dict:
     """Judge each selected paper's stance on `claim` and summarize consensus.
 
-    If `papers` is given, only those are compared; otherwise all indexed papers.
+    Only `user`'s papers are considered. If `papers` is given, the comparison is
+    further narrowed to those; otherwise all of the user's indexed papers.
     """
-    indexed = stats()["papers"]
+    indexed = stats(user)["papers"]
     papers = [p for p in indexed if (papers is None or p in papers)]
     if len(papers) < 2:
         return {"error": "Select at least two papers to compare across them."}
@@ -33,7 +34,7 @@ def compare_claim(claim: str, k: int = 3, papers=None) -> dict:
     blocks = []
     considered = []
     for src in papers:
-        passages = query_in_paper(src, claim, k=k)
+        passages = query_in_paper(src, claim, user, k=k)
         if not passages:
             continue
         considered.append(src)

@@ -1,4 +1,4 @@
-// CiteCheck frontend — chat (per-paper sessions) / compare / review / translate
+// CiteCheck frontend: chat (per-paper sessions) / compare / review / translate
 const $ = (id) => document.getElementById(id);
 const SVGNS = "http://www.w3.org/2000/svg";
 const icons = () => { try { lucide.createIcons(); } catch (_) {} };
@@ -30,18 +30,80 @@ let trLang = null;          // Translate language
 let compareExcluded = new Set();  // papers de-selected from Compare (default: all in)
 let populateReview = null;
 let populateTranslate = null;
+let loadingTimer = null;
+let activeMode = "chat";
+let confirmResolve = null;
+let confirmInvoker = null;
+let currentUser = null;
+let authMode = "login";
 
 // ---------- helpers ----------
 function el(tag, cls, text) { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; }
 function badge(cls, label, plain) { return el("span", `badge ${cls}${plain ? " plain" : ""}`, label); }
 async function api(path, opts = {}) {
   const res = await fetch(path, opts);
-  if (!res.ok) { let m = `Request failed (${res.status})`; try { m = (await res.json()).detail || m; } catch (_) {} throw new Error(m); }
+  if (!res.ok) {
+    // Session expired or missing: drop back to the login gate (except for the
+    // auth endpoints themselves, which handle their own errors).
+    if (res.status === 401 && !["/api/me", "/api/login", "/api/register"].includes(path)) {
+      setUser(null); showAuth(true);
+    }
+    let m = `Request failed (${res.status})`; try { m = (await res.json()).detail || m; } catch (_) {} throw new Error(m);
+  }
   return res.json();
 }
 function toast(msg, err = false) {
   const t = $("toast"); t.textContent = msg; t.classList.toggle("error", err); t.classList.add("show");
   setTimeout(() => t.classList.remove("show"), 3200);
+}
+function setLoadingOverlay(show, title = "Loading PDFs", text = "Preparing your documents for indexing…") {
+  const overlay = $("loadingOverlay");
+  if (!overlay) return;
+  $("loadingTitle").textContent = title;
+  $("loadingText").textContent = text;
+  overlay.classList.toggle("show", show);
+  overlay.setAttribute("aria-hidden", show ? "false" : "true");
+  document.body.style.overflow = show ? "hidden" : "";
+}
+async function withLoadingOverlay(title, text, task) {
+  clearTimeout(loadingTimer);
+  setLoadingOverlay(true, title, text);
+  await new Promise(requestAnimationFrame);
+  await new Promise(requestAnimationFrame);
+  try {
+    return await task();
+  } finally {
+    setLoadingOverlay(false);
+  }
+}
+function closeConfirmDialog(result = false) {
+  const overlay = $("confirmOverlay");
+  if (!overlay) return;
+  overlay.classList.remove("show");
+  document.body.style.overflow = "";
+  if (confirmResolve) {
+    const resolve = confirmResolve;
+    confirmResolve = null;
+    resolve(result);
+  }
+  const restoreFocus = confirmInvoker && typeof confirmInvoker.focus === "function" ? confirmInvoker : document.body;
+  requestAnimationFrame(() => {
+    if (typeof restoreFocus.focus === "function") restoreFocus.focus();
+    overlay.setAttribute("aria-hidden", "true");
+    confirmInvoker = null;
+  });
+}
+function showConfirmDialog({ title, text, confirmLabel = "Confirm", cancelLabel = "Cancel" }) {
+  const overlay = $("confirmOverlay");
+  if (!overlay) return Promise.resolve(false);
+  $("confirmTitle").textContent = title;
+  $("confirmText").textContent = text;
+  $("confirmOk").textContent = confirmLabel;
+  $("confirmCancel").textContent = cancelLabel;
+  overlay.classList.add("show");
+  overlay.setAttribute("aria-hidden", "false");
+  document.body.style.overflow = "hidden";
+  return new Promise((resolve) => { confirmResolve = resolve; });
 }
 function md(t) { return DOMPurify.sanitize(marked.parse(t || "")); }
 function download(name, text) { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([text], { type: "text/plain" })); a.download = name; a.click(); URL.revokeObjectURL(a.href); }
@@ -97,7 +159,7 @@ async function exportNodePDF(node, filename, title) {
 function exportPDF(filename, title, body) {
   if (!(window.jspdf && window.jspdf.jsPDF)) {
     download(filename.replace(/\.pdf$/, ".txt"), title + "\n\n" + body);
-    return toast("PDF library unavailable — exported TXT instead.", true);
+    return toast("PDF library unavailable, exported TXT instead.", true);
   }
   const doc = new window.jspdf.jsPDF({ unit: "pt", format: "a4" });
   const M = 48, W = doc.internal.pageSize.getWidth() - M * 2, BOTTOM = doc.internal.pageSize.getHeight() - M;
@@ -115,20 +177,47 @@ function exportPDF(filename, title, body) {
 function currentList() { return (chatsByPaper[activePaper] ||= []); }
 function saveActive() { try { localStorage.setItem("citecheck_active", activePaper); } catch (_) {} }
 function loadActive() { try { return localStorage.getItem("citecheck_active") || "*"; } catch (_) { return "*"; } }
-async function switchPaper(key) {
-  activePaper = key; setMode("chat");
+function saveMode() { try { localStorage.setItem("citecheck_mode", activeMode); } catch (_) {} }
+function loadMode() { try { return localStorage.getItem("citecheck_mode") || "chat"; } catch (_) { return "chat"; } }
+async function switchPaper(key, preserveMode = false) {
+  activePaper = key;
+  if (!preserveMode) setMode("chat");
   renderPapers(currentPapers);   // self-corrects activePaper to "*" if the paper is gone
   saveActive();
   try { const d = await api(`/api/chats?paper=${encodeURIComponent(activePaper)}`); chatsByPaper[activePaper] = d.items || []; } catch (_) {}
   renderThread();
 }
 
+async function deletePaper(paper) {
+  const ok = await showConfirmDialog({
+    title: `Delete ${paper}?`,
+    text: "This will remove the PDF, its indexed chunks, and that paper's chat history. This action cannot be undone.",
+    confirmLabel: "Delete PDF",
+  });
+  if (!ok) return;
+
+  const wasActive = activePaper === paper;
+  try {
+    await api(`/api/papers/${encodeURIComponent(paper)}`, { method: "DELETE" });
+    delete chatsByPaper[paper];
+    if (selectedPaper === paper) selectedPaper = null;
+    if (trSelected === paper) trSelected = null;
+    toast(`Deleted ${paper}.`);
+    await refreshStats();
+    if (wasActive) await switchPaper("*", true);  // reload the global thread fresh
+  } catch (e) {
+    toast(e.message, true);
+  }
+}
+
 // ---------- mode switching ----------
 function setMode(mode) {
+  activeMode = mode;
   document.querySelectorAll(".nav-item").forEach((b) => b.classList.toggle("active", b.dataset.mode === mode));
   ["chat", "compare", "review", "translate"].forEach((m) => $(`view-${m}`).classList.toggle("hidden", m !== mode));
   $("modeLabel").textContent = { chat: "Chat", compare: "Compare", review: "Peer Review", translate: "Translate" }[mode];
   $("verifyWrap").style.display = mode === "chat" ? "" : "none";
+  saveMode();
   closeSidebar();
 }
 
@@ -142,7 +231,7 @@ function exportText(item) {
     lines.push("");
   }
   lines.push("SOURCES:");
-  for (const c of item.chunks) lines.push(`  [${c.id}] ${c.page ? `${c.source}, p.${c.page}` : c.source}${c.role ? " — " + c.role : ""}`);
+  for (const c of item.chunks) lines.push(`  [${c.id}] ${c.page ? `${c.source}, p.${c.page}` : c.source}${c.role ? " · " + c.role : ""}`);
   return lines.join("\n");
 }
 
@@ -234,7 +323,7 @@ function renderAnswer(node, item, idx) {
       const [cls, label] = VERDICT[c.verdict] || ["b-ink", c.verdict];
       const cl = el("div", "claim"), top = el("div", "claim-top");
       top.appendChild(badge(cls, label));
-      top.appendChild(el("span", "cite", "sources: " + (c.supporting_ids.map((i) => `[${i}]`).join(" ") || "—")));
+      top.appendChild(el("span", "cite", "sources: " + (c.supporting_ids.map((i) => `[${i}]`).join(" ") || "-")));
       cl.appendChild(top); cl.appendChild(el("div", "claim-text", c.claim));
       if (c.rationale) cl.appendChild(el("div", "claim-why", c.rationale));
       sub.appendChild(cl);
@@ -296,12 +385,18 @@ async function send(text) {
 // ---------- selectable papers = per-paper chat sessions ----------
 function renderPapers(papers) {
   const list = $("papersList"); list.innerHTML = "";
-  if (activePaper !== "*" && !papers.includes(activePaper)) activePaper = "*";
+  if (activePaper !== "*" && !papers.includes(activePaper)) { activePaper = "*"; saveActive(); }
   const pill = (key, label) => {
     const p = el("div", "pill" + (key === activePaper ? " sel" : "")); p.dataset.key = key; p.title = label;
     const tick = el("span", "tick"); tick.innerHTML = '<i data-lucide="check"></i>';
     p.append(tick, el("span", "pname", label));
     const n = chatCounts[key] || (chatsByPaper[key] || []).length; if (n) p.appendChild(el("span", "count", String(n)));
+    const del = el("button", "paper-delete", "");
+    del.type = "button";
+    del.setAttribute("aria-label", `Delete ${label}`);
+    del.innerHTML = '<i data-lucide="trash-2"></i>';
+    del.onclick = (e) => { e.stopPropagation(); confirmInvoker = del; deletePaper(key); };
+    p.appendChild(del);
     p.onclick = () => switchPaper(key);
     return p;
   };
@@ -392,8 +487,8 @@ async function runReview() {
     const d = await api("/api/review", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ paper }) });
     out.innerHTML = "";
     const ch = d.chair || {}, chair = el("div", "card chair"), h = el("div", "rev-head"), left = el("div");
-    left.appendChild(el("div", "label", "Chair decision")); left.appendChild(badge("b-violet", ch.recommendation || "—")); h.appendChild(left);
-    const sc = el("div", "score"); sc.innerHTML = `${ch.overall_score ?? "—"}<small>/10</small>`; h.appendChild(sc); chair.appendChild(h);
+    left.appendChild(el("div", "label", "Chair decision")); left.appendChild(badge("b-violet", ch.recommendation || "-")); h.appendChild(left);
+    const sc = el("div", "score"); sc.innerHTML = `${ch.overall_score ?? "-"}<small>/10</small>`; h.appendChild(sc); chair.appendChild(h);
     if (ch.summary) chair.appendChild(el("p", "muted", ch.summary));
     const mk = (title, items) => { const c = el("div"); c.appendChild(el("div", "label", title)); const ul = el("ul", "list-tight"); (items || []).forEach((x) => ul.appendChild(el("li", null, x))); c.appendChild(ul); return c; };
     const cols = el("div", "cols"); cols.append(mk("Top strengths", ch.top_strengths), mk("Top concerns", ch.top_concerns)); chair.appendChild(cols); out.appendChild(chair);
@@ -401,7 +496,7 @@ async function runReview() {
     (d.reviewers || []).forEach((r) => {
       const c = el("div", "card"), hh = el("div", "rev-head"), l = el("div");
       l.appendChild(el("div", "label", r.lens)); l.appendChild(el("b", null, r.name)); hh.appendChild(l);
-      hh.appendChild(badge("b-ink", `${r.score ?? "—"}/10`, true)); c.appendChild(hh);
+      hh.appendChild(badge("b-ink", `${r.score ?? "-"}/10`, true)); c.appendChild(hh);
       if (r.summary) c.appendChild(el("p", "muted", r.summary));
       c.appendChild(mk("Strengths", r.strengths)); c.appendChild(mk("Weaknesses", r.weaknesses)); grid.appendChild(c);
     });
@@ -435,7 +530,7 @@ async function runTranslate() {
     h.appendChild(el("span", "label", lang)); h.appendChild(el("span", "cite", d.paper)); card.appendChild(h);
     const body = el("div", "answer"); body.innerHTML = md(d.text); card.appendChild(body);
     const actions = el("div", "actions"), dl = el("button", "linkbtn"); dl.innerHTML = '<i data-lucide="file-down"></i> Export PDF';
-    dl.onclick = () => exportNodePDF(card, `${d.paper}.${lang}.pdf`, `${lang} — ${d.paper}`, d.text); actions.appendChild(dl); card.appendChild(actions);
+    dl.onclick = () => exportNodePDF(card, `${d.paper}.${lang}.pdf`, `${lang}: ${d.paper}`, d.text); actions.appendChild(dl); card.appendChild(actions);
     out.appendChild(card); icons(); refreshStats();
   } catch (e) { out.innerHTML = ""; toast(e.message, true); }
 }
@@ -457,9 +552,16 @@ async function refreshStats() {
 async function uploadFiles(files) {
   if (!files.length) return;
   const fd = new FormData(); for (const f of files) fd.append("files", f);
-  toast(`Ingesting ${files.length} file(s)…`);
-  try { const d = await api("/api/ingest", { method: "POST", body: fd }); toast(`Indexed ${Object.values(d.results).reduce((a, b) => a + b, 0)} chunks.`); refreshStats(); }
-  catch (e) { toast(e.message, true); }
+  try {
+    toast(`Ingesting ${files.length} file(s)…`);
+    const d = await withLoadingOverlay(
+      "Loading PDFs",
+      `Uploading and indexing ${files.length} PDF${files.length === 1 ? "" : "s"}…`,
+      () => api("/api/ingest", { method: "POST", body: fd })
+    );
+    toast(`Indexed ${Object.values(d.results).reduce((a, b) => a + b, 0)} chunks.`);
+    refreshStats();
+  } catch (e) { toast(e.message, true); }
 }
 
 // ---------- ui plumbing ----------
@@ -467,8 +569,78 @@ function autoresize() { const i = $("input"); i.style.height = "auto"; i.style.h
 function openSidebar() { $("sidebar").classList.add("open"); $("backdrop").classList.add("show"); }
 function closeSidebar() { $("sidebar").classList.remove("open"); $("backdrop").classList.remove("show"); }
 
+// ---------- auth ----------
+function showAuth(show) {
+  const o = $("authOverlay");
+  o.classList.toggle("show", show);
+  o.setAttribute("aria-hidden", show ? "false" : "true");
+  document.body.style.overflow = show ? "hidden" : "";
+  if (show) setTimeout(() => $("authUser").focus(), 50);
+}
+function setUser(name) {
+  currentUser = name;
+  const chip = $("userChip");
+  if (name) {
+    $("userName").textContent = name;
+    $("userAvatar").textContent = name.slice(0, 1);
+    chip.hidden = false;
+  } else {
+    chip.hidden = true;
+  }
+}
+function setAuthMode(mode) {
+  authMode = mode;
+  document.querySelectorAll(".auth-tab").forEach((t) => t.classList.toggle("active", t.dataset.auth === mode));
+  $("authHeading").textContent = mode === "login" ? "Welcome back" : "Create your account";
+  $("authSubmit").textContent = mode === "login" ? "Log in" : "Create account";
+  $("authPass").setAttribute("autocomplete", mode === "login" ? "current-password" : "new-password");
+  $("authError").textContent = "";
+}
+async function submitAuth(e) {
+  e.preventDefault();
+  const username = $("authUser").value.trim();
+  const password = $("authPass").value;
+  if (!username || !password) { $("authError").textContent = "Enter a username and password."; return; }
+  $("authSubmit").disabled = true; $("authError").textContent = "";
+  try {
+    const d = await api(`/api/${authMode}`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password }),
+    });
+    $("authPass").value = "";
+    setUser(d.username);
+    showAuth(false);
+    await bootApp();
+  } catch (err) {
+    $("authError").textContent = err.message;
+  } finally {
+    $("authSubmit").disabled = false;
+  }
+}
+async function logout() {
+  try { await api("/api/logout", { method: "POST" }); } catch (_) {}
+  // Wipe in-memory state so the next account starts clean.
+  chatsByPaper = {}; chatCounts = {}; currentPapers = []; activePaper = "*";
+  selectedPaper = null; trSelected = null;
+  if (thread) { thread.remove(); thread = null; }
+  $("empty").style.display = "";
+  $("papersList").innerHTML = "";
+  setUser(null);
+  setAuthMode("login");
+  showAuth(true);
+}
+async function bootApp() {
+  await refreshStats();
+  setMode(loadMode());
+  await switchPaper(loadActive(), true);
+  icons();
+}
+
 // ---------- events ----------
 document.querySelectorAll(".nav-item").forEach((b) => b.onclick = () => setMode(b.dataset.mode));
+document.querySelectorAll(".auth-tab").forEach((t) => t.onclick = () => setAuthMode(t.dataset.auth));
+$("authForm").addEventListener("submit", submitAuth);
+$("logoutBtn").onclick = logout;
 $("send").onclick = () => send();
 $("input").addEventListener("input", autoresize);
 $("input").addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } });
@@ -477,11 +649,34 @@ $("compareInput").addEventListener("keydown", (e) => { if (e.key === "Enter") ru
 $("reviewBtn").onclick = runReview;
 $("translateBtn").onclick = runTranslate;
 $("fileInput").onchange = (e) => uploadFiles([...e.target.files]);
-$("ingestFolder").onclick = async () => { toast("Ingesting folder…"); try { const d = await api("/api/ingest-folder", { method: "POST" }); toast(`Indexed ${d.total} chunks.`); refreshStats(); } catch (e) { toast(e.message, true); } };
-$("clearIndex").onclick = async () => { if (!confirm("Clear the whole index?")) return; try { await api("/api/clear", { method: "POST" }); toast("Index cleared."); refreshStats(); } catch (e) { toast(e.message, true); } };
+$("ingestFolder").onclick = async () => {
+  try {
+    toast("Ingesting folder…");
+    const d = await withLoadingOverlay(
+      "Loading PDFs",
+      "Scanning data/papers and indexing all PDFs…",
+      () => api("/api/ingest-folder", { method: "POST" })
+    );
+    toast(`Indexed ${d.total} chunks.`);
+    refreshStats();
+  } catch (e) { toast(e.message, true); }
+};
+$("clearIndex").onclick = async () => {
+  const ok = await showConfirmDialog({
+    title: "Clear index?",
+    text: "This will remove all indexed papers and chunks. This action cannot be undone.",
+    confirmLabel: "Clear index",
+  });
+  if (!ok) return;
+  try { await api("/api/clear", { method: "POST" }); toast("Index cleared."); refreshStats(); } catch (e) { toast(e.message, true); }
+};
+$("confirmCancel").onclick = () => closeConfirmDialog(false);
+$("confirmOk").onclick = () => closeConfirmDialog(true);
+$("confirmOverlay").onclick = (e) => { if (e.target === $("confirmOverlay")) closeConfirmDialog(false); };
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && $("confirmOverlay").classList.contains("show")) closeConfirmDialog(false); });
 $("exportConv").onclick = () => {
   const list = currentList(); if (!thread || !list.length) return toast("Nothing to export in this chat.");
-  const title = `CiteCheck chat — ${activePaper === "*" ? "All papers" : activePaper}`;
+  const title = `CiteCheck chat: ${activePaper === "*" ? "All papers" : activePaper}`;
   const body = list.map((it, i) => `--- Exchange ${i + 1} ---\n${exportText(it)}`).join("\n\n");
   exportNodePDF(thread, "citecheck_chat.pdf", title, body);
 };
@@ -493,4 +688,16 @@ SUGGESTIONS.forEach((s) => { const b = el("button", "suggestion", s); b.onclick 
 initLangChips();
 populateReview = setupDropdown("reviewDropdown", "ddTrigger", "ddLabel", "ddMenu");
 populateTranslate = setupDropdown("trDropdown", "trTrigger", "trLabel", "trMenu");
-(async () => { await refreshStats(); await switchPaper(loadActive()); icons(); })();
+(async () => {
+  icons();
+  try {
+    const me = await api("/api/me");   // 401 if no valid session
+    setUser(me.username);
+    showAuth(false);
+    await bootApp();
+  } catch (_) {
+    setUser(null);
+    setAuthMode("login");
+    showAuth(true);
+  }
+})();

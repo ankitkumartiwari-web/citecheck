@@ -40,7 +40,7 @@ def main():
 
     pipe = build_pipeline()
 
-    # Stratified 5-fold cross-validation — a fair estimate on a small dataset.
+    # Stratified 5-fold cross-validation - a fair estimate on a small dataset.
     cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
     scores = cross_val_score(pipe, texts, labels, cv=cv)
     preds = cross_val_predict(pipe, texts, labels, cv=cv)
@@ -49,7 +49,7 @@ def main():
     print(f"5-fold CV accuracy: {scores.mean():.2f} (+/- {scores.std():.2f})\n")
     print(classification_report(labels, preds, zero_division=0))
 
-    # Fit on ALL data and persist (small dataset — use every example).
+    # Fit on ALL data and persist (small dataset - use every example).
     pipe.fit(texts, labels)
     joblib.dump(pipe, MODEL_PATH)
     print(f"Saved model -> {MODEL_PATH}")

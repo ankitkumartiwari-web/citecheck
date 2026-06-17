@@ -1,1 +1,1 @@
-"""Research Paper Assistant — source package."""
+"""Research Paper Assistant - source package."""

@@ -1,7 +1,7 @@
-# Free LLM via OpenRouter (OpenAI-compatible API — used for answering + verification)
+# Free LLM via OpenRouter (OpenAI-compatible API - used for answering + verification)
 openai>=1.40
 
-# Vector store (ships its own ONNX embedding model — runs locally, FREE, no PyTorch)
+# Vector store (ships its own ONNX embedding model - runs locally, FREE, no PyTorch)
 chromadb>=0.5
 
 # PDF parsing

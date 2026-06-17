@@ -1,4 +1,4 @@
-"""LLM layer (OpenRouter — free, OpenAI-compatible API).
+"""LLM layer (OpenRouter - free, OpenAI-compatible API).
 
 Responsibilities:
   - format retrieved passages into a context block
@@ -91,7 +91,7 @@ def _chat(messages, temperature=0.2, max_tokens=1500, response_format=None):
         try:
             return client.chat.completions.create(**kwargs)
         except BadRequestError:
-            # Most likely the model doesn't support JSON mode — drop it and retry.
+            # Most likely the model doesn't support JSON mode - drop it and retry.
             if "response_format" in kwargs:
                 kwargs.pop("response_format")
                 continue

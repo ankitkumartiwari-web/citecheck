@@ -1,8 +1,8 @@
 """Lightweight rate limiting to protect your free OpenRouter credits.
 
 Two guards, both configurable in config.py / .env:
-  1. MIN_SECONDS_BETWEEN_CALLS — throttle: wait between consecutive LLM calls.
-  2. MAX_CALLS_PER_DAY — hard daily cap on LLM calls (persisted to disk so it
+  1. MIN_SECONDS_BETWEEN_CALLS - throttle: wait between consecutive LLM calls.
+  2. MAX_CALLS_PER_DAY - hard daily cap on LLM calls (persisted to disk so it
      survives restarts). Raises DailyLimitReached when hit.
 
 Each user question makes 2 calls (answer + verification).

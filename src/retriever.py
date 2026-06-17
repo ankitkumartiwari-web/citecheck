@@ -5,9 +5,9 @@ An OPTIONAL cross-encoder re-ranker can sharpen the ordering if you install
 `sentence-transformers` (see requirements.txt).
 """
 import config
-from src.vectorstore import get_collection
+from src.vectorstore import get_collection, where_for
 
-# Optional re-ranker — only loaded if the package is installed.
+# Optional re-ranker - only loaded if the package is installed.
 _reranker = None
 try:
     from sentence_transformers import CrossEncoder  # type: ignore
@@ -17,19 +17,19 @@ except Exception:
     _reranker = None  # base vector search still works fine without it
 
 
-def retrieve(query: str, k: int | None = None, sources=None):
+def retrieve(query: str, k: int | None = None, sources=None, user: str | None = None):
     """Return a list of passage dicts ranked by relevance to `query`.
 
     Each passage: {id, text, source, page, distance}
     `id` is a 1-based number we use for inline citations like [1], [2].
-    If `sources` is a non-empty list of filenames, retrieval is restricted to
-    those papers (chat scoping); otherwise all indexed papers are searched.
+    Retrieval is always restricted to `user`'s own papers; if `sources` is a
+    non-empty list of filenames, it is further scoped to those papers.
     """
     k = k or config.TOP_K
     collection = get_collection()
 
-    # Optional scope filter: only search within the selected papers.
-    where = {"source": {"$in": list(sources)}} if sources else None
+    # Always scope to the owner; optionally narrow to the selected papers.
+    where = where_for(user, sources=sources)
 
     # Pull a few extra candidates when re-ranking so it has room to reorder.
     n_fetch = k * 3 if _reranker else k

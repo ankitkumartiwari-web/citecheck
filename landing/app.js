@@ -20,12 +20,13 @@ window.addEventListener("scroll", () => {
 }, { passive: true });
 
 if (stage && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+  // Slight 3D tilt that follows the pointer (kept gentle so nothing clips).
   stage.addEventListener("pointermove", (event) => {
     const rect = stage.getBoundingClientRect();
     const x = (event.clientX - rect.left) / rect.width - 0.5;
     const y = (event.clientY - rect.top) / rect.height - 0.5;
     const windowCard = stage.querySelector(".window");
-    windowCard.style.transform = `rotateX(${4 - y * 5}deg) rotateY(${-7 + x * 6}deg) translateY(-3px)`;
+    windowCard.style.transform = `rotateX(${3 - y * 4}deg) rotateY(${-6 + x * 5}deg) translateY(-3px)`;
   });
 
   stage.addEventListener("pointerleave", () => {

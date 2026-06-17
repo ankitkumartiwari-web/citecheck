@@ -10,7 +10,7 @@ from src.vectorstore import paper_context
 REVIEWERS = [
     {
         "key": "methodology",
-        "name": "Reviewer A — Methodology",
+        "name": "Reviewer A - Methodology",
         "lens": "Soundness of methods & experiments",
         "system": "You are a rigorous methodology reviewer for a top conference. "
                   "Assess experimental design, baselines, ablations, statistical "
@@ -18,7 +18,7 @@ REVIEWERS = [
     },
     {
         "key": "novelty",
-        "name": "Reviewer B — Novelty & Significance",
+        "name": "Reviewer B - Novelty & Significance",
         "lens": "Originality & impact",
         "system": "You are a reviewer focused on novelty and significance. Assess "
                   "how original the contribution is versus prior work and how much "
@@ -26,7 +26,7 @@ REVIEWERS = [
     },
     {
         "key": "clarity",
-        "name": "Reviewer C — Clarity & Reproducibility",
+        "name": "Reviewer C - Clarity & Reproducibility",
         "lens": "Writing & reproducibility",
         "system": "You are a reviewer focused on clarity and reproducibility. Assess "
                   "how clearly the paper is written and whether someone could "
@@ -50,9 +50,9 @@ _CHAIR_SYSTEM = (
 )
 
 
-def review_paper(source: str) -> dict:
-    """Run the reviewer panel + chair synthesis for one paper."""
-    context = paper_context(source)
+def review_paper(source: str, user: str) -> dict:
+    """Run the reviewer panel + chair synthesis for one of `user`'s papers."""
+    context = paper_context(source, user)
     if not context.strip():
         return {"error": f"No indexed content found for {source}."}
 

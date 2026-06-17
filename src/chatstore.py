@@ -26,19 +26,27 @@ def _get():
     return _collection
 
 
-def save_exchange(paper: str, query: str, answer: str, report, chunks) -> None:
-    """Store one Q&A exchange under `paper` (use '*' for the all-papers session)."""
+def _scope(user: str, paper: str | None = None) -> dict:
+    """Chroma `where` filter scoped to one user (+ optional paper session)."""
+    clauses = [{"user": user or "\x00"}]
+    if paper is not None:
+        clauses.append({"paper": paper})
+    return clauses[0] if len(clauses) == 1 else {"$and": clauses}
+
+
+def save_exchange(user: str, paper: str, query: str, answer: str, report, chunks) -> None:
+    """Store one Q&A exchange for `user` under `paper` ('*' = all-papers session)."""
     payload = {"query": query, "answer": answer, "report": report, "chunks": chunks}
     _get().add(
         ids=[uuid.uuid4().hex],
         documents=[query or " "],
-        metadatas=[{"paper": paper, "ts": time.time(), "payload": json.dumps(payload)}],
+        metadatas=[{"user": user, "paper": paper, "ts": time.time(), "payload": json.dumps(payload)}],
     )
 
 
-def list_chats(paper: str):
-    """Return stored exchanges for `paper`, oldest first."""
-    data = _get().get(where={"paper": paper}, include=["metadatas"])
+def list_chats(user: str, paper: str):
+    """Return `user`'s stored exchanges for `paper`, oldest first."""
+    data = _get().get(where=_scope(user, paper), include=["metadatas"])
     items = []
     for m in (data.get("metadatas") or []):
         try:
@@ -53,9 +61,9 @@ def list_chats(paper: str):
     return items
 
 
-def counts() -> dict:
-    """Return {paper_key: exchange_count} across all sessions."""
-    data = _get().get(include=["metadatas"])
+def counts(user: str) -> dict:
+    """Return {paper_key: exchange_count} across `user`'s sessions."""
+    data = _get().get(where=_scope(user), include=["metadatas"])
     out = {}
     for m in (data.get("metadatas") or []):
         p = m.get("paper", "*")
@@ -63,15 +71,9 @@ def counts() -> dict:
     return out
 
 
-def clear(paper: str | None = None) -> None:
-    """Delete one session's chats, or all if `paper` is None."""
-    global _collection
-    if paper:
-        _get().delete(where={"paper": paper})
-    else:
-        client = chromadb.PersistentClient(path=str(config.CHROMA_DIR))
-        try:
-            client.delete_collection(_COLLECTION)
-        except Exception:
-            pass
-        _collection = None
+def clear(user: str, paper: str | None = None) -> None:
+    """Delete one of `user`'s sessions, or all of the user's chats if `paper` is None.
+
+    Scoped to the user - never drops the shared collection.
+    """
+    _get().delete(where=_scope(user, paper))

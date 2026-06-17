@@ -12,8 +12,9 @@ def _tag_roles(chunks):
     return chunks
 
 
-def ask(query: str, k: int | None = None, do_verify: bool = True, sources=None) -> dict:
-    """Full RAG pipeline for one question.
+def ask(query: str, k: int | None = None, do_verify: bool = True, sources=None,
+        user: str | None = None) -> dict:
+    """Full RAG pipeline for one question, scoped to `user`'s papers.
 
     Returns:
         {
@@ -22,7 +23,7 @@ def ask(query: str, k: int | None = None, do_verify: bool = True, sources=None) 
           "report": VerificationReport | None,
         }
     """
-    chunks = retrieve(query, k=k, sources=sources)
+    chunks = retrieve(query, k=k, sources=sources, user=user)
     if not chunks:
         msg = ("No relevant passages found in the selected paper(s)."
                if sources else

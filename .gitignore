@@ -8,10 +8,9 @@ __pycache__/
 venv/
 env/
 
-# Project data (don't commit PDFs, the vector DB, or usage counters)
-data/papers/*.pdf
-data/chroma/
-data/usage.json
+# Project data (runtime: uploaded PDFs, vector DB, accounts, usage counters).
+# Never commit - it holds user uploads and password hashes. The app recreates it.
+/data/
 
 # OS / editor
 .DS_Store

@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=5" />
+  <link rel="stylesheet" href="styles.css?v=8" />
 </head>
 <body>
   <div class="app">
@@ -27,34 +27,40 @@
         <button class="nav-item" data-mode="translate"><i data-lucide="languages"></i><span>Translate</span></button>
       </nav>
 
-      <div class="block">
-        <div class="label">Library</div>
+      <section class="sidebar-section sidebar-knowledge" aria-label="Knowledge Base">
+        <div class="section-title">Knowledge Base</div>
         <label class="upload" id="uploadLabel">
           <input type="file" id="fileInput" accept="application/pdf" multiple hidden />
           <i data-lucide="upload"></i><span>Upload PDFs</span>
         </label>
-        <button class="btn ghost wide" id="ingestFolder"><i data-lucide="folder-input"></i> Ingest data/papers</button>
-        <button class="btn ghost wide subtle" id="clearIndex"><i data-lucide="trash-2"></i> Clear index</button>
-      </div>
+        <div class="sidebar-summary" aria-label="Knowledge base summary">
+          <div class="stat-row"><span>Papers loaded</span><b id="statPapers">0</b></div>
+          <div class="stat-row"><span>Chunks indexed</span><b id="statChunks">0</b></div>
+        </div>
+      </section>
 
-      <div class="block">
-        <div class="label">Overview</div>
-        <div class="stat-row"><span>Chunks</span><b id="statChunks">—</b></div>
-        <div class="stat-row"><span>Papers</span><b id="statPapers">—</b></div>
-        <div class="stat-row"><span>Calls today</span><b id="statCalls">—</b></div>
-        <div class="meter"><div class="meter-fill" id="meterFill"></div></div>
-      </div>
-
-      <div class="block">
-        <div class="label">Papers · click to open chat</div>
+      <section class="sidebar-section sidebar-papers" aria-label="Paper Selection">
+        <div class="section-title">Paper Selection</div>
         <div class="papers" id="papersList"></div>
         <div class="scope-hint" id="scopeHint"></div>
-      </div>
+        <button class="btn ghost wide subtle sidebar-export" id="exportConv"><i data-lucide="file-down"></i> Export chat (PDF)</button>
+      </section>
 
-      <div class="block foot">
-        <button class="btn ghost wide" id="exportConv"><i data-lucide="file-down"></i> Export chat (PDF)</button>
-        <div class="credit label">Trained ML · RAG · multi-agent</div>
-      </div>
+      <section class="sidebar-section sidebar-secondary" aria-label="Secondary Action">
+        <div class="section-title">Secondary Action</div>
+        <button class="btn ghost wide" id="ingestFolder"><i data-lucide="folder-input"></i> Ingest data/papers</button>
+      </section>
+
+      <section class="sidebar-section sidebar-usage" aria-label="Usage">
+        <div class="section-title">Usage</div>
+        <div class="stat-row"><span>Calls today</span><b id="statCalls">0</b></div>
+        <div class="meter"><div class="meter-fill" id="meterFill"></div></div>
+      </section>
+
+      <section class="sidebar-section sidebar-danger" aria-label="Danger Zone">
+        <div class="section-title">Danger Zone</div>
+        <button class="btn ghost wide subtle" id="clearIndex"><i data-lucide="trash-2"></i> Clear index</button>
+      </section>
     </aside>
 
     <!-- ───────── Main ───────── -->
@@ -62,10 +68,17 @@
       <header class="topbar">
         <button class="iconbtn only-mobile" id="menuBtn" aria-label="Menu"><i data-lucide="menu"></i></button>
         <div class="crumbs"><span class="label" id="modeLabel">Chat</span></div>
-        <label class="verify-toggle" id="verifyWrap">
-          <input type="checkbox" id="verifyToggle" checked />
-          <span>Verify claims</span>
-        </label>
+        <div class="topbar-right">
+          <label class="verify-toggle" id="verifyWrap">
+            <input type="checkbox" id="verifyToggle" checked />
+            <span>Verify claims</span>
+          </label>
+          <div class="user-chip" id="userChip" hidden>
+            <span class="avatar" id="userAvatar" aria-hidden="true"></span>
+            <span class="uname" id="userName"></span>
+            <button class="iconbtn" id="logoutBtn" type="button" aria-label="Log out" title="Log out"><i data-lucide="log-out"></i></button>
+          </div>
+        </div>
       </header>
 
       <!-- CHAT -->
@@ -151,13 +164,68 @@
   </div>
 
   <div class="backdrop" id="backdrop"></div>
+  <div class="loading-overlay" id="loadingOverlay" aria-live="polite" aria-busy="true" aria-hidden="true">
+    <div class="loading-card">
+      <div class="spinner" aria-hidden="true"></div>
+      <div class="loading-copy">
+        <p class="label">Please wait</p>
+        <h2 id="loadingTitle">Loading PDFs</h2>
+        <p id="loadingText">Preparing your documents for indexing…</p>
+      </div>
+    </div>
+  </div>
+  <div class="confirm-overlay" id="confirmOverlay" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="confirmTitle" aria-describedby="confirmText">
+    <div class="confirm-card" role="document">
+      <div class="confirm-head">
+        <div class="confirm-icon" aria-hidden="true"><i data-lucide="triangle-alert"></i></div>
+        <div>
+          <p class="label">Danger zone</p>
+          <h2 id="confirmTitle">Clear index?</h2>
+        </div>
+      </div>
+      <p id="confirmText">This will remove all indexed papers and chunks. This action cannot be undone.</p>
+      <div class="confirm-actions">
+        <button class="btn ghost" id="confirmCancel" type="button">Cancel</button>
+        <button class="btn solid danger" id="confirmOk" type="button">Clear index</button>
+      </div>
+    </div>
+  </div>
   <div class="toast" id="toast"></div>
+
+  <!-- ───────── Auth gate ───────── -->
+  <div class="auth-overlay" id="authOverlay" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="authHeading">
+    <div class="auth-card">
+      <div class="brand-row">
+        <div class="brand">CiteCheck</div>
+        <span class="dot"></span>
+      </div>
+      <div class="label">Research Intelligence</div>
+      <h2 id="authHeading" class="auth-title">Welcome back</h2>
+      <div class="auth-tabs" role="tablist">
+        <button class="auth-tab active" type="button" data-auth="login" role="tab">Log in</button>
+        <button class="auth-tab" type="button" data-auth="register" role="tab">Sign up</button>
+      </div>
+      <form id="authForm" class="auth-form" autocomplete="on">
+        <label class="auth-field">
+          <span class="label">Username</span>
+          <input id="authUser" name="username" autocomplete="username" placeholder="your_username" autocapitalize="off" spellcheck="false" />
+        </label>
+        <label class="auth-field">
+          <span class="label">Password</span>
+          <input id="authPass" name="password" type="password" autocomplete="current-password" placeholder="••••••••" />
+        </label>
+        <div class="auth-error" id="authError" role="alert"></div>
+        <button class="btn solid wide" id="authSubmit" type="submit">Log in</button>
+      </form>
+      <p class="auth-hint" id="authHint">Your papers, chats and analyses are private to your account. No one else can see them.</p>
+    </div>
+  </div>
 
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-  <script src="app.js?v=5"></script>
+  <script src="app.js?v=8"></script>
 </body>
 </html>

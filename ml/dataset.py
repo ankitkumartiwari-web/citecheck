@@ -8,7 +8,7 @@ Four roles common in scientific writing:
 
 This is a compact, hand-labeled seed set. It's enough for a TF-IDF + Logistic
 Regression model to learn the keyword/phrasing patterns of each role, and it's
-easy to extend — just add (sentence, label) pairs.
+easy to extend - just add (sentence, label) pairs.
 """
 
 DATA = [

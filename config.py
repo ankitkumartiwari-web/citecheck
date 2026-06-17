@@ -21,9 +21,13 @@ CHROMA_DIR = DATA_DIR / "chroma"   # vector DB is persisted here
 PAPERS_DIR.mkdir(parents=True, exist_ok=True)
 CHROMA_DIR.mkdir(parents=True, exist_ok=True)
 
-# ---- Model (OpenRouter — free, OpenAI-compatible API) ---------------------
+# ---- Accounts / sessions --------------------------------------------------
+AUTH_DB = DATA_DIR / "auth.db"           # local user + session store (SQLite)
+SESSION_COOKIE = os.getenv("SESSION_COOKIE", "cc_session")
+
+# ---- Model (OpenRouter - free, OpenAI-compatible API) ---------------------
 # Get free keys at https://openrouter.ai/keys and put them in .env.
-# Supports MULTIPLE keys for load balancing — calls are round-robined across
+# Supports MULTIPLE keys for load balancing - calls are round-robined across
 # them and fail over on a rate limit, so two free keys ~= double the quota.
 #   OPENROUTER_API_KEY=...           (primary)
 #   OPENROUTER_API_KEY_2=...         (secondary)

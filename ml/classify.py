@@ -18,7 +18,7 @@ def _get_model():
             import joblib
             _model = joblib.load(MODEL_PATH)
         except Exception:
-            _load_failed = True  # not trained yet — don't retry every call
+            _load_failed = True  # not trained yet - don't retry every call
     return _model
 
 

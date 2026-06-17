@@ -1,4 +1,4 @@
-"""Citation / grounding verification — the feature that sets this project apart.
+"""Citation / grounding verification - the feature that sets this project apart.
 
 After the model writes an answer, we send the answer + the same context back and
 ask the model to act as a strict fact-checker: break the answer into atomic claims
@@ -38,7 +38,7 @@ class VerificationReport(BaseModel):
     summary: str = ""
 
 
-# Exact JSON shape we want back — embedded in the prompt so any model can comply.
+# Exact JSON shape we want back - embedded in the prompt so any model can comply.
 _SCHEMA_HINT = (
     '{"claims":[{"claim":"<text>","verdict":"supported|partially_supported|'
     'unsupported","supporting_ids":[1,2],"rationale":"<one sentence>"}],'
