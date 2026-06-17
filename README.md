@@ -225,16 +225,29 @@ separately.
 
 ### App (Railway)
 
-`railway.json` and `Procfile` are included. Railway runs `python server.py`. Set
-the environment variables in the Railway dashboard:
+`railway.json` and `Procfile` are included. Railway runs `python server.py`, which
+binds `0.0.0.0:$PORT` and exposes `/healthz` for the platform health check.
 
-```bash
-OPENROUTER_API_KEY=sk-or-v1-your-real-key
-# optional, for higher throughput:
-OPENROUTER_API_KEY_2=sk-or-v1-your-second-key
-# optional, persistent storage for uploads + vector DB across redeploys:
-DATA_DIR=/data
-```
+1. Create a service from this repo (Railway auto-detects `railway.json`).
+2. Add service variables under Settings -> Variables:
+
+   ```bash
+   OPENROUTER_API_KEY=sk-or-v1-your-real-key
+   # optional 2nd key for higher throughput:
+   OPENROUTER_API_KEY_2=sk-or-v1-your-second-key
+   # point storage at the mounted volume from step 3:
+   DATA_DIR=/data
+   ```
+
+3. **Attach a persistent volume** (Settings -> Volumes) mounted at `/data`, and
+   make sure `DATA_DIR=/data` matches that mount path. The container's own disk is
+   wiped on every redeploy, so without a volume your accounts (`auth.db`),
+   uploaded PDFs, and the vector DB are lost each deploy. With the volume they
+   survive redeploys and restarts.
+
+The keys are required (without them every LLM call fails). The volume is optional
+but strongly recommended; without it the app runs fine but starts empty after each
+redeploy.
 
 ### App (any Python host)
 
@@ -254,8 +267,9 @@ survive restarts.
 `netlify.toml` publishes the `landing/` folder as a static site with sensible
 security headers.
 
-Do not commit `.env`, uploaded PDFs, `data/chroma/`, or `data/auth.db`; they are
-intentionally ignored.
+The entire `data/` directory is git-ignored (uploaded PDFs, the vector DB,
+`auth.db` with password hashes, and usage counters), as is `.env`. Never commit
+them; the app recreates `data/` on startup.
 
 ---
 
