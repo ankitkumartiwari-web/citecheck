@@ -12,4 +12,11 @@ jobs:
       - name: Ping health endpoint
         env:
           HEALTH_URL: https://citecheck-kqdr.onrender.com/healthz
-        run: curl --fail --silent --show-error --max-time 30 "$HEALTH_URL"
+        run: >-
+          curl --fail --silent --show-error
+          --connect-timeout 15
+          --max-time 120
+          --retry 2
+          --retry-all-errors
+          --retry-delay 5
+          "$HEALTH_URL"
